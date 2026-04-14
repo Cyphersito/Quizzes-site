@@ -1,0 +1,123 @@
+[
+    { 
+        "id": 1, 
+        "question": "¿Cuál es la primera fase del proceso penal?", 
+        "options": ["Juicio oral", "Fase intermedia", "Investigación (o instrucción)", "Ejecución de la pena"], 
+        "correct": 2 
+    },
+    { 
+        "id": 2, 
+        "question": "¿Qué objetivo principal tiene la fase de investigación?", 
+        "options": ["Dictar sentencia", "Determinar la culpabilidad del acusado", "Reunir pruebas sobre el hecho delictivo", "Ejecutar la pena"], 
+        "correct": 2 
+    },
+    { 
+        "id": 3, 
+        "question": "¿Quién dirige generalmente la fase de investigación en el proceso penal?", 
+        "options": ["El juez de sentencia", "El fiscal o Ministerio Público", "El jurado", "El defensor"], 
+        "correct": 1 
+    },
+    { 
+        "id": 4, 
+        "question": "¿Qué se decide en la fase intermedia?", 
+        "options": ["La ejecución de la pena", "Si el caso pasa a juicio o se archiva", "La culpabilidad del acusado", "La apelación de la sentencia"], 
+        "correct": 1 
+    },
+    { 
+        "id": 5, 
+        "question": "¿Cuál es la finalidad de la fase de juicio oral?", 
+        "options": ["Recopilar pruebas", "Confirmar la acusación", "Valorar pruebas y dictar sentencia", "Ejecutar la pena"], 
+        "correct": 2 
+    },
+    { 
+        "id": 6, 
+        "question": "¿Qué principio predomina en el juicio oral?", 
+        "options": ["Escrituración", "Publicidad y oralidad", "Reserva absoluta", "Inmediatez administrativa"], 
+        "correct": 1 
+    },
+    { 
+        "id": 7, 
+        "question": "¿En qué fase se ejecuta la sentencia dictada?", 
+        "options": ["Investigación", "Intermedia", "Juicio oral", "Ejecución de la pena"], 
+        "correct": 3 
+    },
+    { 
+        "id": 8, 
+        "question": "¿Qué ocurre si no hay suficientes pruebas en la fase intermedia?", 
+        "options": ["Se dicta sentencia condenatoria", "Se archiva o se sobresee el caso", "Se ejecuta la pena", "Se pasa automáticamente a juicio"], 
+        "correct": 1 
+    },
+    { 
+        "id": 9, 
+        "question": "¿Quién dicta la sentencia en el proceso penal?", 
+        "options": ["El fiscal", "El juez o tribunal de juicio", "El defensor", "La policía"], 
+        "correct": 1 
+    },
+    { 
+        "id": 10, 
+        "question": "¿Cuál de las siguientes NO es una fase del proceso penal?", 
+        "options": ["Investigación", "Intermedia", "Administrativa", "Juicio oral"], 
+        "correct": 2 
+    },
+    { 
+        "id": 11, 
+        "question": "¿Qué documento presenta el fiscal al finalizar la investigación para iniciar la fase intermedia?", 
+        "options": ["Sentencia", "Acusación", "Apelación", "Recurso"], 
+        "correct": 1 
+    },
+    { 
+        "id": 12, 
+        "question": "¿Qué función cumple el juez en la fase intermedia?", 
+        "options": ["Investigar los hechos", "Ejecutar la pena", "Controlar la acusación y decidir si procede el juicio", "Dictar la sentencia final"], 
+        "correct": 2 
+    },
+    { 
+        "id": 13, 
+        "question": "¿Cuál es el principio que garantiza que las partes puedan presentar sus pruebas en igualdad de condiciones?", 
+        "options": ["Legalidad", "Contradicción", "Publicidad", "Inmediación"], 
+        "correct": 1 
+    },
+    { 
+        "id": 14, 
+        "question": "¿Qué sucede después del juicio oral si el acusado es declarado culpable?", 
+        "options": ["Se archiva el caso", "Se dicta y luego se ejecuta la pena", "Se reinicia la investigación", "Se elimina la acusación"], 
+        "correct": 1 
+    },
+    { 
+        "id": 15, 
+        "question": "¿Qué fase permite filtrar casos que no tienen suficiente fundamento?", 
+        "options": ["Investigación", "Intermedia", "Juicio oral", "Ejecución"], 
+        "correct": 1 
+    },
+    { 
+        "id": 16, 
+        "question": "¿Qué característica tiene la fase de investigación?", 
+        "options": ["Es pública y oral", "Es principalmente escrita y reservada", "Es definitiva", "Es solo administrativa"], 
+        "correct": 1 
+    },
+    { 
+        "id": 17, 
+        "question": "¿Qué actor tiene la función de defender al acusado durante el proceso penal?", 
+        "options": ["Fiscal", "Juez", "Defensor", "Policía"], 
+        "correct": 2 
+    },
+    { 
+        "id": 18, 
+        "question": "¿Qué principio implica que el juez debe estar presente durante la práctica de las pruebas?", 
+        "options": ["Publicidad", "Inmediación", "Legalidad", "Contradicción"], 
+        "correct": 1 
+    },
+    { 
+        "id": 19, 
+        "question": "¿Qué recurso puede interponerse contra una sentencia?", 
+        "options": ["Acusación", "Apelación", "Investigación", "Ejecución"], 
+        "correct": 1 
+    },
+    { 
+        "id": 20, 
+        "question": "¿Cuál es el objetivo de la fase de ejecución de la pena?", 
+        "options": ["Determinar culpabilidad", "Reunir pruebas", "Cumplir la sanción impuesta", "Investigar el delito"], 
+        "correct": 2 
+    }
+   
+]

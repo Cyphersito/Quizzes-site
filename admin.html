@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Pantalla del Host - Kahoot Clone</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background: #222; color: white; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: #333; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1 { font-size: 3em; color: #fff; text-shadow: 2px 2px 0px #000; }
+        
+        #lobby { padding: 40px 0; }
+        .pin-box { background: white; color: black; display: inline-block; padding: 10px 40px; font-size: 3em; font-weight: bold; border-radius: 10px; margin-bottom: 20px;}
+        
+        button { padding: 20px 40px; font-size: 1.5em; cursor: pointer; border: none; border-radius: 8px; background: #26890c; color: white; font-weight: bold; transition: transform 0.1s; }
+        button:active { transform: scale(0.95); }
+        
+        /* Temporizador */
+        #timer-container { background: #555; margin: 20px auto; width: 100%; border-radius: 20px; position: relative; overflow: hidden; }
+        #progress-bar { background: #7622d7; height: 40px; width: 100%; transition: width 1s linear, background-color 0.5s; }
+        #seconds { position: absolute; top: 0; left: 50%; transform: translateX(-50%); margin: 0; line-height: 40px; font-size: 1.5em; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);}
+        
+        /* Opciones en la pantalla grande */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .opt { padding: 30px; font-size: 1.5em; font-weight: bold; border-radius: 8px; color: white;}
+        .opt-0 { background: #e21b3c; } .opt-1 { background: #1368ce; } .opt-2 { background: #d89e00; } .opt-3 { background: #26890c; }
+
+        /* Estilos del Podio */
+        .podium-container { display: flex; align-items: flex-end; justify-content: center; gap: 15px; margin-top: 60px; height: 300px; }
+        .podium-step { display: flex; flex-direction: column; align-items: center; width: 150px; border-top-left-radius: 10px; border-top-right-radius: 10px; font-weight: bold; position: relative; color: #333;}
+        .podium-1 { height: 220px; background: linear-gradient(180deg, #ffd700 0%, #daa520 100%); z-index: 3;} 
+        .podium-2 { height: 160px; background: linear-gradient(180deg, #e0e0e0 0%, #a9a9a9 100%); z-index: 2;} 
+        .podium-3 { height: 110px; background: linear-gradient(180deg, #cd7f32 0%, #8b4513 100%); z-index: 1;} 
+        .podium-rank { font-size: 4em; margin-top: auto; margin-bottom: 10px; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .podium-info { text-align: center; position: absolute; top: -80px; width: 100%; color: white;}
+        .podium-name { font-size: 1.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .podium-score { font-size: 1em; color: #ddd; }
+
+	/* --- ADAPTACIÓN PARA PANTALLAS MÁS PEQUEÑAS (HOST) --- */
+        @media (max-width: 800px) {
+            h1 { font-size: 2em; }
+            .opt { padding: 15px; font-size: 1.2em; }
+            .podium-container { height: 250px; gap: 5px; margin-top: 50px; }
+            .podium-step { width: 30%; }
+            .podium-1 { height: 180px; }
+            .podium-2 { height: 130px; }
+            .podium-3 { height: 90px; }
+            .podium-rank { font-size: 2.5em; }
+        }	
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="lobby">
+            <h2>Únete en tu teléfono</h2>
+            <div class="pin-box">LOCALHOST:3000</div>
+            <h2>Jugadores conectados: <span id="player-count">0</span></h2>
+            <br><br>
+            <button onclick="startGame()">▶ INICIAR JUEGO</button>
+        </div>
+
+        <div id="game" style="display:none;">
+            <h1 id="questionText">Cargando...</h1>
+            
+            <div id="timer-container">
+                <div id="progress-bar"></div>
+                <p id="seconds">20</p>
+            </div>
+
+            <div id="options" class="grid"></div>
+            <div id="feedback"></div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io('http://localhost:3000');
+        
+        const tickSound = new Audio('https://cdn.freesound.org/previews/254/254316_4062622-lq.mp3');
+        const winSound = new Audio('https://cdn.freesound.org/previews/274/274180_4486188-lq.mp3');
+        tickSound.volume = 0.5; winSound.volume = 0.8;
+
+        // No necesitamos registrarnos como jugador, solo escuchamos.
+        
+        function startGame() {
+            socket.emit('startGame');
+            document.getElementById('lobby').style.display = 'none';
+            document.getElementById('game').style.display = 'block';
+        }
+
+        // Actualizar contador de jugadores en el lobby
+        socket.on('updatePlayerList', (players) => {
+            document.getElementById('player-count').innerText = players.length;
+        });
+
+        // Mostrar la pregunta
+        socket.on('newQuestion', (data) => {
+            document.getElementById('questionText').innerText = data.text;
+            document.getElementById('feedback').innerHTML = '';
+            document.getElementById('timer-container').style.display = 'block';
+            
+            tickSound.pause(); tickSound.currentTime = 0;
+            
+            const optionsDiv = document.getElementById('options');
+            optionsDiv.innerHTML = ''; 
+            
+            data.options.forEach((opt, i) => {
+                const div = document.createElement('div');
+                div.innerText = opt;
+                div.className = `opt opt-${i}`; // Solo es visual, el admin no puede hacer clic
+                optionsDiv.appendChild(div);
+            });
+        });
+
+        // Reloj
+        socket.on('timerUpdate', (timeLeft) => {
+            document.getElementById('seconds').innerText = timeLeft;
+            const progressBar = document.getElementById('progress-bar');
+            
+            progressBar.style.width = ((timeLeft / 20) * 100) + "%";
+
+            if (timeLeft <= 5 && timeLeft > 0) {
+                progressBar.style.backgroundColor = "#e21b3c"; 
+                tickSound.currentTime = 0; 
+                tickSound.play().catch(e => {});
+                document.getElementById('seconds').style.transform = `translateX(-50%) scale(1.5)`;
+                setTimeout(() => document.getElementById('seconds').style.transform = `translateX(-50%) scale(1)`, 200);
+            } else {
+                progressBar.style.backgroundColor = "#7622d7"; 
+            }
+        });
+
+        // Marcar la respuesta correcta en pantalla grande
+        socket.on('questionFinished', (correctIndex) => {
+            const options = document.querySelectorAll('.opt');
+            options.forEach((opt, i) => {
+                if (i === correctIndex) {
+                    opt.style.border = "8px solid white";
+                    opt.style.transform = "scale(1.05)";
+                } else {
+                    opt.style.opacity = "0.3"; 
+                }
+            });
+        });
+
+        // Mostrar Podio
+        socket.on('gameOver', (ranking) => {
+            document.getElementById('timer-container').style.display = 'none';
+            document.getElementById('options').innerHTML = '';
+            document.getElementById('questionText').innerText = '🏆 ¡Podio Final! 🏆';
+            
+            const first = ranking[0] || { name: '---', score: 0 };
+            const second = ranking[1] || { name: '---', score: 0 };
+            const third = ranking[2] || { name: '---', score: 0 };
+
+            let podiumHTML = `
+                <div class="podium-container">
+                    <div class="podium-step podium-2">
+                        <div class="podium-info"><div class="podium-name">${second.name}</div><div class="podium-score">${second.score}</div></div>
+                        <div class="podium-rank">2</div>
+                    </div>
+                    <div class="podium-step podium-1">
+                        <div class="podium-info"><div class="podium-name">👑<br>${first.name}</div><div class="podium-score">${first.score}</div></div>
+                        <div class="podium-rank">1</div>
+                    </div>
+                    <div class="podium-step podium-3">
+                        <div class="podium-info"><div class="podium-name">${third.name}</div><div class="podium-score">${third.score}</div></div>
+                        <div class="podium-rank">3</div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('feedback').innerHTML = podiumHTML;
+
+            winSound.play(); 
+            
+            const duration = 3 * 1000;
+            const end = Date.now() + duration;
+
+            (function frame() {
+                confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#e21b3c', '#1368ce', '#d89e00', '#26890c'] });
+                confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#e21b3c', '#1368ce', '#d89e00', '#26890c'] });
+                if (Date.now() < end) requestAnimationFrame(frame);
+            }());
+        });
+    </script>
+</body>
+</html>

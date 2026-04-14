@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cuestionario Derecho Penal</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background: #f0f0f0; padding: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 600px; margin: 0 auto; }
+        button { padding: 20px; font-size: 1.2em; cursor: pointer; border: none; border-radius: 8px; transition: transform 0.1s; }
+        button:active { transform: scale(0.95); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        
+        /* Colores clásicos de las opciones */
+        .opt-0 { background: #e21b3c; color: white; }
+        .opt-1 { background: #1368ce; color: white; }
+        .opt-2 { background: #d89e00; color: white; }
+        .opt-3 { background: #26890c; color: white; }
+        
+        /* Temporizador */
+        #timer-container { background: #ddd; margin: 20px auto; width: 100%; max-width: 600px; border-radius: 20px; position: relative; overflow: hidden; }
+        #progress-bar { background: #7622d7; height: 30px; width: 100%; transition: width 1s linear, background-color 0.5s; }
+        #seconds { position: absolute; top: 0; left: 50%; transform: translateX(-50%); margin: 0; line-height: 30px; color: white; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);}
+        
+        #host-panel { background: #e8f4f8; padding: 15px; margin-bottom: 20px; border-radius: 8px; max-width: 600px; margin: 0 auto 20px auto;}
+
+        /* --- ESTILOS DEL PODIO --- */
+        .podium-container {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 40px;
+            height: 250px; /* Altura máxima del podio */
+        }
+        .podium-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 120px;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        /* Alturas y colores de las medallas */
+        .podium-1 { height: 180px; background: linear-gradient(180deg, #ffd700 0%, #daa520 100%); } /* Oro */
+        .podium-2 { height: 130px; background: linear-gradient(180deg, #e0e0e0 0%, #a9a9a9 100%); } /* Plata */
+        .podium-3 { height: 90px;  background: linear-gradient(180deg, #cd7f32 0%, #8b4513 100%); } /* Bronce */
+        
+        .podium-rank { font-size: 3em; margin-top: auto; margin-bottom: 10px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
+        .podium-info { text-align: center; position: absolute; top: -60px; width: 100%; }
+        .podium-name { font-size: 1.2em; font-weight: bold; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .podium-score { font-size: 0.9em; color: #666; }
+
+	/* --- ADAPTACIÓN PARA TELÉFONOS MÓVILES --- */
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            h2 { font-size: 1.2em; }
+            /* Hacemos los botones más altos para que sea fácil tocarlos con el pulgar */
+            button { padding: 40px 10px; font-size: 1.5em; }
+            .grid { gap: 5px; padding: 10px 0; }
+            
+            /* Ajustamos el podio para que quepa en pantallas estrechas */
+            .podium-container { gap: 5px; height: 200px; margin-top: 50px; }
+            .podium-step { width: 30%; } /* Usamos porcentajes en lugar de píxeles fijos */
+            .podium-1 { height: 140px; }
+            .podium-2 { height: 100px; }
+            .podium-3 { height: 70px; }
+            .podium-rank { font-size: 2em; }
+            .podium-name { font-size: 1em; }
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <div id="setup">
+        <h1>Únete al Juego</h1>
+        <input type="text" id="username" placeholder="Tu nombre" style="padding: 10px; font-size: 1.1em;">
+        <button onclick="join()" style="background: #333; color: white; padding: 10px 20px;">Entrar</button>
+    </div>
+
+        <div id="game" style="display:none;">
+        <h2 id="questionText">Esperando a que el host inicie...</h2>
+        
+        <div id="timer-container" style="display:none;">
+            <div id="progress-bar"></div>
+            <p id="seconds">20</p>
+        </div>
+
+        <div id="options" class="grid"></div>
+        <h3 id="feedback"></h3>
+    </div>
+
+    <script>
+        const socket = io('http://localhost:3000');
+
+// 1. Pre-cargamos los sonidos desde URLs públicas (puedes cambiarlas por archivos mp3 en tu computadora luego)
+const tickSound = new Audio('https://cdn.freesound.org/previews/254/254316_4062622-lq.mp3');
+const winSound = new Audio('https://cdn.freesound.org/previews/274/274180_4486188-lq.mp3');
+
+// Bajar un poco el volumen para que no asuste
+tickSound.volume = 0.5; 
+winSound.volume = 0.8;
+
+function join() {
+    const name = document.getElementById('username').value;
+    if (!name) return alert("Por favor, ingresa un nombre");
+
+    socket.emit('joinGame', name);
+    document.getElementById('setup').style.display = 'none';
+    // Eliminamos la línea que mostraba el host-panel
+    document.getElementById('game').style.display = 'block';
+}
+
+socket.on('updatePlayerList', (players) => {
+    document.getElementById('player-count').innerText = players.length;
+});
+
+socket.on('newQuestion', (data) => {
+    document.getElementById('questionText').innerText = data.text;
+    document.getElementById('feedback').innerText = '';
+    document.getElementById('timer-container').style.display = 'block';
+    
+    // Detener cualquier sonido anterior por si acaso
+    tickSound.pause();
+    tickSound.currentTime = 0;
+    
+    const optionsDiv = document.getElementById('options');
+    optionsDiv.innerHTML = ''; 
+    
+    data.options.forEach((opt, i) => {
+        const btn = document.createElement('button');
+        btn.innerText = opt;
+        btn.className = `opt-${i}`;
+        btn.onclick = () => {
+            socket.emit('submitAnswer', i);
+            document.getElementById('feedback').innerText = '⏳ Respuesta enviada...';
+            const allBtns = document.querySelectorAll('#options button');
+            allBtns.forEach(b => b.disabled = true);
+        };
+        optionsDiv.appendChild(btn);
+    });
+});
+
+socket.on('timerUpdate', (timeLeft) => {
+    document.getElementById('seconds').innerText = timeLeft;
+    const progressBar = document.getElementById('progress-bar');
+    
+    const percentage = (timeLeft / 20) * 100;
+    progressBar.style.width = percentage + "%";
+
+    // NUEVO: Efectos cuando queda poco tiempo
+    if (timeLeft <= 5 && timeLeft > 0) {
+        progressBar.style.backgroundColor = "#e21b3c"; // Se pone rojo
+        
+        // Reproducir sonido de Tic-Tac
+        tickSound.currentTime = 0; // Reiniciar el sonido para que suene cada segundo
+        tickSound.play().catch(e => console.log("El navegador bloqueó el sonido automático"));
+        
+        // Pequeño efecto visual: hacer que el número del reloj "tiemble" un poco
+        document.getElementById('seconds').style.transform = `translateX(-50%) scale(1.5)`;
+        setTimeout(() => {
+            document.getElementById('seconds').style.transform = `translateX(-50%) scale(1)`;
+        }, 200);
+    } else {
+        progressBar.style.backgroundColor = "#7622d7"; // Vuelve a morado
+    }
+});
+
+socket.on('questionFinished', (correctIndex) => {
+    document.getElementById('feedback').innerText = '¡Tiempo agotado!';
+    const buttons = document.querySelectorAll('#options button');
+    
+    buttons.forEach((btn, i) => {
+        btn.disabled = true;
+        if (i === correctIndex) {
+            btn.style.border = "5px solid gold";
+            btn.style.transform = "scale(1.05)";
+        } else {
+            btn.style.opacity = "0.3"; 
+        }
+    });
+});
+
+socket.on('gameOver', (ranking) => {
+    document.getElementById('timer-container').style.display = 'none';
+    document.getElementById('questionText').innerText = '🏆 ¡Podio Final! 🏆';
+    document.getElementById('options').innerHTML = ''; // Limpiar botones
+    
+    // 1. Extraemos a los 3 mejores de forma segura (por si hay menos de 3 jugadores)
+    const first = ranking[0] || { name: '---', score: 0 };
+    const second = ranking[1] || { name: '---', score: 0 };
+    const third = ranking[2] || { name: '---', score: 0 };
+
+    // 2. Construimos el HTML del podio (El orden visual es 2do, 1ro, 3ro)
+    let podiumHTML = `
+        <div class="podium-container">
+            <div class="podium-step podium-2">
+                <div class="podium-info">
+                    <div class="podium-name">${second.name}</div>
+                    <div class="podium-score">${second.score} pts</div>
+                </div>
+                <div class="podium-rank">2</div>
+            </div>
+
+            <div class="podium-step podium-1">
+                <div class="podium-info">
+                    <div class="podium-name">👑<br>${first.name}</div>
+                    <div class="podium-score">${first.score} pts</div>
+                </div>
+                <div class="podium-rank">1</div>
+            </div>
+
+            <div class="podium-step podium-3">
+                <div class="podium-info">
+                    <div class="podium-name">${third.name}</div>
+                    <div class="podium-score">${third.score} pts</div>
+                </div>
+                <div class="podium-rank">3</div>
+            </div>
+        </div>
+    `;
+
+    // 3. (Opcional) Mostrar el resto de los jugadores abajo del podio
+    if (ranking.length > 3) {
+        podiumHTML += '<div style="margin-top: 30px; text-align: left; display: inline-block; background: white; padding: 15px; border-radius: 8px;">';
+        podiumHTML += '<h4>El resto de los jugadores:</h4>';
+        for(let i = 3; i < ranking.length; i++) {
+            podiumHTML += `<p>#${i + 1} - ${ranking[i].name}: ${ranking[i].score} pts</p>`;
+        }
+        podiumHTML += '</div>';
+    }
+
+    // Insertar todo este HTML en la pantalla
+    document.getElementById('feedback').innerHTML = podiumHTML;
+
+    // ¡Efectos de Victoria que ya teníamos!
+    winSound.play(); 
+    
+    const duration = 3 * 1000;
+    const end = Date.now() + duration;
+
+    (function frame() {
+        confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#e21b3c', '#1368ce', '#d89e00', '#26890c'] });
+        confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#e21b3c', '#1368ce', '#d89e00', '#26890c'] });
+        if (Date.now() < end) requestAnimationFrame(frame);
+    }());
+});    
+</script>
+</body>
+</html>
